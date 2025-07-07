@@ -5,7 +5,7 @@ import TextSplit from './text-split';
 function App() {
     const source = useRef<HTMLDivElement>(null);
     const target = useRef<HTMLDivElement>(null);
-    const [text, setText] = useState(`第一段文本<div>aaa</div>React 是由 Facebook 开发的 JavaScript 库，用于构建用户界面。它采用组件化架构，将复杂 UI 拆分为可复用的独立组件，提升代码维护性。核心特点包括声明式语法、虚拟 DOM 和单向数据流。
+    const [text, setText] = useState(`第一段文本<div>aaa</div>React 是由 Facebook<div style="width:20px;height:20px;background:blue;display:inline-block;"></div> 开发的 JavaScript 库，用于构建用户界面。它采用组件化架构，将复杂 UI 拆分为可复用的独立组件，提升代码维护性。核心特点包括声明式语法、虚拟 DOM 和单向数据流。
 
 声明式语法通过 JSX 实现，允许在 JavaScript 中编写类似 HTML 的结构，使代码更直观。虚拟 DOM 机制会先对比新旧状态差异，再更新真实 DOM，减少浏览器重绘成本，提升性能。
 
@@ -18,7 +18,7 @@ React 生态丰富，配套工具有 Create React App 快速搭建项目，React
 使用 React 开发时，需注意组件生命周期（类组件）或 Hook 调用规则，避免副作用导致的内存泄漏。虚拟 DOM  diff 算法采用深度优先遍历，通过 key 属性优化列表渲染效率。当前 React 最新版本持续优化并发渲染机制，提升应用响应性能。`);
     const splitText = () => {
         if (source.current && target.current) {
-            new TextSplit().splitText(source.current, target.current, text);
+            new TextSplit().splitText([source.current, target.current], text);
         }
     }
     return (
