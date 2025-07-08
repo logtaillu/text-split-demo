@@ -98,7 +98,7 @@ export default class TextSplit {
      * @param interval 定时间隔
      * @param gap 阈值
      */
-    private waitForComplete(node: Element, interval: number = 10, gap = 0.1) {
+    private waitForComplete(node: Element, interval: number = 50, gap = 0.1) {
         return new Promise<void>((resolve) => {
             let height = node.scrollHeight;
             const timeFunc = () => {
