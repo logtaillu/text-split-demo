@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import TextSplit from './text-split';
 import { useResizeDetector } from 'react-resize-detector';
-
+const splitHandler = new TextSplit();
 
 function App() {
     const source = useRef<HTMLDivElement>(null);
@@ -25,9 +25,8 @@ React 生态丰富，配套工具有 Create React App 快速搭建项目，React
         refreshMode: 'debounce',
         handleHeight: false,
         refreshRate: 100,
-        refreshOptions: { leading: true }
+        refreshOptions: { leading: true, trailing: true }
     });
-    const splitHandler = new TextSplit();
     const startSplit = (content: string) => {
         if (source.current && target.current) {
             splitHandler.splitText(source.current, target.current, content);
