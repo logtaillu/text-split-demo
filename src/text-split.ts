@@ -3,9 +3,9 @@
  * 1. 流程：
  * 递归遍历dom树
  *   - 若为纯文本节点，二分分割
- *   - 若为元素节点，递归处理子节点，
+ *   - 若为元素节点，递归处理子节点
  *   每个节点分割后，返回{left, move}结构的新节点，用于构建新节点，没有则为null
- * 2.注意点
+ * 2.tips
  *  1. getBoundingClientRect是受transform缩放影响的，offsetHeight不是
  *  2. selectRange只有getBoundingClientRect
  */
@@ -85,6 +85,7 @@ export default class TextSplit {
             return;
         }
         source.innerHTML = html;
+        // 通过高度监听等待dom渲染完成
         await this.waitForComplete(source);
         // 如何判断完成
         const { move, left } = this.splitContainer(source);
