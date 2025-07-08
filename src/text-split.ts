@@ -88,8 +88,8 @@ export default class TextSplit {
         await this.waitForComplete(source);
         // 如何判断完成
         const { move, left } = this.splitContainer(source);
-        source.innerHTML = (left as Element)?.getHTML() || "";
-        target.innerHTML = (move as Element)?.getHTML() || "";
+        source.innerHTML = (left as Element)?.innerHTML || "";
+        target.innerHTML = (move as Element)?.innerHTML || "";
     }
     /**
      * 等待元素完成高度变化
@@ -165,7 +165,7 @@ export default class TextSplit {
                 if (!result[wrapkey]) {
                     result[wrapkey] = node.cloneNode();
                 }
-                result[wrapkey].appendChild(child);
+                result[wrapkey]?.appendChild(child);
             }
         }
         for (let idx = 0; idx < children.length; idx++) {
