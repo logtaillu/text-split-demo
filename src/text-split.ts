@@ -1,9 +1,13 @@
 /**
  * 文本拆分
- * 1. 递归遍历dom树
- *   1.1 若为纯文本节点，二分分割
- *   1.2 若为元素节点，递归处理子节点，
+ * 1. 流程：
+ * 递归遍历dom树
+ *   - 若为纯文本节点，二分分割
+ *   - 若为元素节点，递归处理子节点，
  *   每个节点分割后，返回{left, move}结构的新节点，用于构建新节点，没有则为null
+ * 2.注意点
+ *  1. getBoundingClientRect是受transform缩放影响的，offsetHeight不是
+ *  2. selectRange只有getBoundingClientRect
  */
 interface ISplitResult {
     left: Node | null;
@@ -18,6 +22,13 @@ export default class TextSplit {
     // 不可分割的类名
     UNSPLIT_CLASSES: string[] = [];
     /**************************辅助函数 ******************************/
+    /** 获取缩放比
+     * @param node 当前节点
+     */
+    private getScale(node: Element) {
+        const offsetHeight = (node as HTMLElement).offsetHeight;
+        return offsetHeight ? this.getHeight(node) / offsetHeight : 0;
+    }
     /** 字符串转数值
      * @param numval 数字字符串
      */
@@ -59,29 +70,56 @@ export default class TextSplit {
     }
 
     /********************功能函数**********************/
+    timer: number | null = null;
     /**
      * 节点内容分割入口
-     * @param targets 存放dom
-     * @param target 第二个dom
+     * 分割前一个dom内容后，为dom和下一个dom重新赋值html
+     * @param targets dom列表
      * @param html html文本
      */
-    splitText(targets: HTMLDivElement[], html: string) {
-        if (targets.length <= 0) {
+    async splitText(source: HTMLDivElement, target: HTMLDivElement, html: string) {
+        if (this.timer) {
+            clearTimeout(this.timer);
+        }
+        if (!source) {
             return;
         }
-        targets[0].innerHTML = html;
-        for (let i = 1; i < targets.length; i++) {
-            const source = targets[i - 1];
-            const target = targets[i];
-            const { move, left } = this.splitContainer(source);
-            source.innerHTML = (left as Element)?.getHTML() || "";
-            target.innerHTML = (move as Element)?.getHTML() || "";
-        }
+        source.innerHTML = html;
+        await this.waitForComplete(source);
+        // 如何判断完成
+        const { move, left } = this.splitContainer(source);
+        source.innerHTML = (left as Element)?.getHTML() || "";
+        target.innerHTML = (move as Element)?.getHTML() || "";
     }
-    /** 对指定容器做分割 */
-    splitContainer(node: Element): ISplitResult {
-        const height = this.getContainerHeight(node);
-        return this.splitNode(node, node, height);
+    /**
+     * 等待元素完成高度变化
+     * @param node 当前节点
+     * @param interval 定时间隔
+     * @param gap 阈值
+     */
+    private waitForComplete(node: Element, interval: number = 10, gap = 0.1) {
+        return new Promise<void>((resolve) => {
+            let height = node.scrollHeight;
+            const timeFunc = () => {
+                let newHeight = node.scrollHeight;
+                if (Math.abs(newHeight - height) < gap) {
+                    this.timer && clearTimeout(this.timer);
+                    resolve();
+                } else {
+                    height = newHeight;
+                    this.timer = setTimeout(timeFunc, interval);
+                }
+            }
+            this.timer = setTimeout(timeFunc, interval);
+        });
+    }
+    /**
+     * 分割当前容器
+     * @param node 当前节点
+     */
+    splitContainer(container: Element): ISplitResult {
+        const height = this.getContainerHeight(container);
+        return this.splitNode(container, container, height);
     }
 
     /**
@@ -94,60 +132,63 @@ export default class TextSplit {
         // 去除padding和border的高度
         const { paddingBottom, borderBottomWidth } = getComputedStyle(node);
         const gapHeight = this.getNum(paddingBottom) + this.getNum(borderBottomWidth);
-        return height - gapHeight;
+        return height - gapHeight * this.getScale(node);
     }
 
     /**
-     * 嵌套分割节点
+     * 递归分割节点
      * @param node 当前节点
-     * @param height 总高度
-     * @param top 距离顶部距离
+     * @param container 容器
+     * @param height 可用高度
      */
     private splitNode(node: Element, container: Element, height: number): ISplitResult {
         if (this.isTextNode(node)) {
-            // 纯文本节点
+            // 1. 纯文本节点，走文本分割逻辑
             return this.splitTextNode(node, container, height);
         }
-        const nodeHeight = node.scrollHeight + this.getTopOffset(container, node);
+        // 计算底部位置
+        const nodeHeight = node.scrollHeight * this.getScale(node) + this.getTopOffset(container, node);
         if (nodeHeight <= height + this.HEIGHT_GAP) {
-            // 没有溢出
+            // 2. 没有溢出
             return { left: node.cloneNode(true), move: null };
         }
+        // childNodes包含text node,children不包含
         const children = Array.from(node.childNodes);
         if (children.length <= 0 || this.isUnsplitable(node)) {
-            // 没有子元素，整个溢出
+            // 3. 没有子元素或者不可分割，整个溢出
             return { left: null, move: node.cloneNode(true) };
         }
-        // 遍历处理每个子节点
-        let leftWrap = null;
-        let moveWrap = null;
-        for (let idx = 0; idx < children.length; idx++) {
-            const { move, left } = this.splitNode(children[idx] as Element, container, height);
-            if (left) {
-                if (!leftWrap) {
-                    leftWrap = node.cloneNode();
+        // 4. 遍历处理每个子节点，分离溢出的部分
+        const result: ISplitResult = { left: null, move: null };
+        const push = (child: Node | null, wrapkey: keyof ISplitResult) => {
+            if (child) {
+                if (!result[wrapkey]) {
+                    result[wrapkey] = node.cloneNode();
                 }
-                leftWrap.appendChild(left);
-            }
-            if (move) {
-                if (!moveWrap) {
-                    moveWrap = node.cloneNode();
-                }
-                moveWrap.appendChild(move);
+                result[wrapkey].appendChild(child);
             }
         }
-        return { left: leftWrap, move: moveWrap };
+        for (let idx = 0; idx < children.length; idx++) {
+            const { move, left } = this.splitNode(children[idx] as Element, container, height);
+            push(left, "left");
+            push(move, "move");
+        }
+        return result;
     }
-    /** 获取range和lineHeight的差值高度
-     * range.getBoundingClientRect().height基本上是无关缩放的，可能有小数位差
-     * top - 从自己的top开始
-     * height - 需要加上appendHeight
+
+    /********************文本节点分割 *****************************/
+    /**
+     * 获取节点的底部溢出高度
+     * @param node 当前节点
+     * @param range 当前range
      */
     getAppendHeight(node: Element, range: Range) {
-        const { display, lineHeight } = getComputedStyle(node.parentNode as Element);
+        const parent = node.parentNode as Element;
+        const { display, lineHeight } = getComputedStyle(parent);
         if (display !== "inline" && range) {
-            const numLineHeight = this.getNum(lineHeight);
+            const numLineHeight = this.getNum(lineHeight) * this.getScale(parent);
             range.setEnd(range.startContainer, 1);
+            // 认为上下均分，除以2
             return Math.max(0, (numLineHeight - this.getHeight(range)) / 2);
         }
         return 0;
@@ -161,19 +202,38 @@ export default class TextSplit {
     private splitTextNode(node: Element, container: Element, height: number): ISplitResult {
         // 文本内容
         const text = node.textContent || '';
+        // 创建range
         const range = this.createRange(node);
+        // 文本长度
         const length = range.endOffset;
+        // 获取附加高度
         const appendHeight = this.getAppendHeight(node, range);
+        // 获取顶部偏移
         const top = this.getTopOffset(container, range);
+        // 计算选中范围的高度是否溢出
         const isOver = () => {
             return this.getHeight(range) + top + appendHeight > height + this.HEIGHT_GAP;
         }
-        const end = this.halfSplit(range, 0, length, isOver);
+        // 整体没有溢出
+        range.setEnd(range.startContainer, length);
+        if (!isOver()) {
+            return { move: null, left: this.createTextNode(text) };
+        }
+        // 整体溢出
+        range.setEnd(range.startContainer, 0);
+        if (isOver()) {
+            return { move: this.createTextNode(text), left: null };
+        }
+        // 二分查找临界位置
+        const end = this.halfSplit(range, 1, length, isOver);
+        // 分离文本创建新节点
         const leftText = text.slice(0, end);
         const moveText = text.slice(end);
         return { left: this.createTextNode(leftText), move: this.createTextNode(moveText) };
     }
-    /** 创建文本节点 */
+    /** 创建文本节点
+     * @param text 文本内容
+     */
     private createTextNode(text: string): Text | null {
         if (text.length) {
             const node = document.createTextNode(text);
@@ -181,7 +241,14 @@ export default class TextSplit {
         }
         return null;
     }
-    /** 二分查找临界位置 */
+    /** 二分查找临界位置
+     * range的offset是从1开始算1个字符的，所以序号也从1开始标记
+     * 最后返回的offset是溢出点，本身需要move
+     * @param range 当前range
+     * @param start 起始序号[1开始]
+     * @param end 结束序号
+     * @param isOver 溢出判断
+     */
     private halfSplit(range: Range, start: number, end: number, isOver: () => boolean): number {
         const half = Math.floor((end - start) / 2) + start;
         range.setEnd(range.startContainer, half);
