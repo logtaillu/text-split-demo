@@ -148,15 +148,16 @@ export default class TextSplit {
             return this.splitTextNode(node, container, height);
         }
         // 计算底部位置
-        const nodeHeight = node.scrollHeight * this.getScale(node) + this.getTopOffset(container, node);
+        const topOffset = this.getTopOffset(container, node);
+        const nodeHeight = node.scrollHeight * this.getScale(node) + topOffset;
         if (nodeHeight <= height + this.HEIGHT_GAP) {
             // 2. 没有溢出
             return { left: node.cloneNode(true), move: null };
         }
         // childNodes包含text node,children不包含
         const children = Array.from(node.childNodes);
-        if (children.length <= 0 || this.isUnsplitable(node)) {
-            // 3. 没有子元素或者不可分割，整个溢出
+        if (topOffset> height+this.HEIGHT_GAP || children.length <= 0 || this.isUnsplitable(node)) {
+            // 3. 整体都溢出、没有子元素或者不可分割，整个移动
             return { left: null, move: node.cloneNode(true) };
         }
         // 4. 遍历处理每个子节点，分离溢出的部分
