@@ -10,8 +10,14 @@
  *  2. selectRange只有getBoundingClientRect
  */
 interface ISplitResult {
+    // 留在source的节点
     left: Node | null;
+    // 移动的节点
     move: Node | null;
+    // 移动节点的顶部位置
+    top: number | null;
+    // 移动节点的底部位置
+    bottom: number | null;
 }
 export default class TextSplit {
     /**************************常量 *****************************/
@@ -88,9 +94,13 @@ export default class TextSplit {
         // 通过高度监听等待dom渲染完成
         await this.waitForComplete(source);
         // 如何判断完成
-        const { move, left } = this.splitContainer(source);
+        const { move, left, top, bottom } = this.splitContainer(source);
+        const height = (bottom || 0) - (top || 0);
+        console.log(top, bottom, height);
+        const totalHeight = this.getContainerTotalHeight(target, height);
         source.innerHTML = (left as Element)?.innerHTML || "";
         target.innerHTML = (move as Element)?.innerHTML || "";
+        console.log("result", Math.round(totalHeight), totalHeight, "real", target.offsetHeight, target.getBoundingClientRect().height);
     }
     /**
      * 等待元素完成高度变化
@@ -135,6 +145,12 @@ export default class TextSplit {
         const gapHeight = this.getNum(paddingBottom) + this.getNum(borderBottomWidth);
         return height - gapHeight * this.getScale(node);
     }
+    // 获取容器完整高度
+    private getContainerTotalHeight(node: Element, height: number) {
+        const { paddingBottom, borderBottomWidth, paddingTop, borderTopWidth } = getComputedStyle(node);
+        const gapHeight = this.getNum(paddingBottom) + this.getNum(borderBottomWidth) + this.getNum(paddingTop) + this.getNum(borderTopWidth);
+        return gapHeight + height;
+    }
 
     /**
      * 递归分割节点
@@ -149,20 +165,22 @@ export default class TextSplit {
         }
         // 计算底部位置
         const topOffset = this.getTopOffset(container, node);
-        const nodeHeight = node.scrollHeight * this.getScale(node) + topOffset;
+        const scale = this.getScale(node);
+        const nodeHeight = node.scrollHeight * scale + topOffset;
         if (nodeHeight <= height + this.HEIGHT_GAP) {
             // 2. 没有溢出
-            return { left: node.cloneNode(true), move: null };
+            return { left: node.cloneNode(true), move: null, top: null, bottom: null };
         }
         // childNodes包含text node,children不包含
         const children = Array.from(node.childNodes);
-        if (topOffset> height+this.HEIGHT_GAP || children.length <= 0 || this.isUnsplitable(node)) {
+        if (topOffset > height + this.HEIGHT_GAP || children.length <= 0 || this.isUnsplitable(node)) {
+            const noScaleTop = topOffset / scale;
             // 3. 整体都溢出、没有子元素或者不可分割，整个移动
-            return { left: null, move: node.cloneNode(true) };
+            return { left: null, move: node.cloneNode(true), top: noScaleTop, bottom: node.scrollHeight + noScaleTop };
         }
         // 4. 遍历处理每个子节点，分离溢出的部分
-        const result: ISplitResult = { left: null, move: null };
-        const push = (child: Node | null, wrapkey: keyof ISplitResult) => {
+        const result: ISplitResult = { left: null, move: null, top: null, bottom: null };
+        const push = (child: Node | null, wrapkey: "left" | "move") => {
             if (child) {
                 if (!result[wrapkey]) {
                     result[wrapkey] = node.cloneNode();
@@ -171,9 +189,17 @@ export default class TextSplit {
             }
         }
         for (let idx = 0; idx < children.length; idx++) {
-            const { move, left } = this.splitNode(children[idx] as Element, container, height);
+            const { move, left, top, bottom } = this.splitNode(children[idx] as Element, container, height);
             push(left, "left");
             push(move, "move");
+            if (move) {
+                if (top) {
+                    result.top = Math.min(top, result.top || top);
+                }
+                if (bottom) {
+                    result.bottom = Math.max(bottom, result.bottom || bottom);
+                }
+            }
         }
         return result;
     }
@@ -194,6 +220,19 @@ export default class TextSplit {
             return Math.max(0, (numLineHeight - this.getHeight(range)) / 2);
         }
         return 0;
+    }
+    /**
+     * 获取当前range范围的上下位置
+     * @param range 当前range
+     * @param appendHeight 附加高度
+     */
+    getRangeRect(range: Range, appendHeight: number, container: Element, node: Element) {
+        // 获取顶部偏移
+        const topOffset = this.getTopOffset(container, range);
+        const scale = this.getScale(node.parentNode as Element);
+        const top = (topOffset - appendHeight) / scale;
+        const bottom = (topOffset + this.getHeight(range) + appendHeight) / scale;
+        return { top, bottom };
     }
     /**
      * 分割文本节点：顶部位置：range top - container top
@@ -219,19 +258,24 @@ export default class TextSplit {
         // 整体没有溢出
         range.setEnd(range.startContainer, length);
         if (!isOver()) {
-            return { move: null, left: this.createTextNode(text) };
+            return { move: null, left: this.createTextNode(text), top: null, bottom: null };
         }
         // 整体溢出
         range.setEnd(range.startContainer, 0);
         if (isOver()) {
-            return { move: this.createTextNode(text), left: null };
+            range.setEnd(range.startContainer, length);
+            return { move: this.createTextNode(text), left: null, ...this.getRangeRect(range, appendHeight, container, node) };
         }
         // 二分查找临界位置
         const end = this.halfSplit(range, 1, length, isOver);
         // 分离文本创建新节点
         const leftText = text.slice(0, end);
         const moveText = text.slice(end);
-        return { left: this.createTextNode(leftText), move: this.createTextNode(moveText) };
+        // 设置范围
+        range.setStart(range.startContainer, end);
+        range.setEnd(range.startContainer, length);
+
+        return { left: this.createTextNode(leftText), move: this.createTextNode(moveText), ...this.getRangeRect(range, appendHeight, container, node) };
     }
     /** 创建文本节点
      * @param text 文本内容

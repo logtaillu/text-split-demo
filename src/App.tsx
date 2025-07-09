@@ -50,8 +50,8 @@ React 生态丰富，配套工具有 Create React App 快速搭建项目，React
                 className='w-full h-30 border border-solid rounded' placeholder='请输入文本'
                 value={text}
             ></textarea>
-            <div ref={source} className='w-full border border-solid rounded h-50 overflow-hidden p-3 leading-6'></div>
-            <div ref={target} className='w-full border border-solid rounded min-h-50 p-3 leading-6'></div>
+            <div ref={source} className='w-full border border-solid rounded h-50 overflow-hidden p-3 leading-6 box-border'></div>
+            <div ref={target} className='w-full border border-solid rounded min-h-50 p-3 leading-6 box-border'></div>
             <button onClick={onClick}>转换</button>
         </div>
     )
