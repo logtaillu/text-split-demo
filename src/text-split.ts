@@ -95,11 +95,13 @@ export default class TextSplit {
         await this.waitForComplete(source);
         // 如何判断完成
         const { move, left, top, bottom } = this.splitContainer(source);
+        // 内容占高
         const height = (bottom || 0) - (top || 0);
-        console.log(top, bottom, height);
+        // 带上容器padding和border的高度，用于和真实撑开的高度对比
         const totalHeight = this.getContainerTotalHeight(target, height);
         source.innerHTML = (left as Element)?.innerHTML || "";
         target.innerHTML = (move as Element)?.innerHTML || "";
+        // 对比结果
         console.log("result", Math.round(totalHeight), totalHeight, "real", target.offsetHeight, target.getBoundingClientRect().height);
     }
     /**
