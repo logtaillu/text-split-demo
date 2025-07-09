@@ -101,7 +101,14 @@ export default class TextSplit {
         const totalHeight = this.getContainerTotalHeight(target, height);
         source.innerHTML = (left as Element)?.innerHTML || "";
         target.innerHTML = (move as Element)?.innerHTML || "";
-        // 对比结果
+        /**
+         * 对比结果
+         * 误差来源
+         * 1. appendHeight(行高相比select range的溢出）按上下平分计算了，但是实际不是均分的
+         * 富文本内容没想到真实测量方式
+         * 容器内只有一段纯文本占满时，可以用容器和文本的top、bottom差值计算上下溢出
+         * 2. scale上的计算误差：offsetHeight基本是整数，rect height会有小数
+         */
         console.log("result", Math.round(totalHeight), totalHeight, "real", target.offsetHeight, target.getBoundingClientRect().height);
     }
     /**
@@ -233,6 +240,7 @@ export default class TextSplit {
         const topOffset = this.getTopOffset(container, range);
         const scale = this.getScale(node.parentNode as Element);
         const top = (topOffset - appendHeight) / scale;
+        console.log("range rect",topOffset, appendHeight, scale);
         const bottom = (topOffset + this.getHeight(range) + appendHeight) / scale;
         return { top, bottom };
     }
