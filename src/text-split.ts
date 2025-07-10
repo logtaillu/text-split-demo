@@ -72,7 +72,7 @@ export default class TextSplit {
             return true;
         }
         const classList = target.classList;
-        return this.UNSPLIT_TAGS.findIndex(cls => classList.contains(cls)) >= 0;
+        return this.UNSPLIT_CLASSES.findIndex(cls => classList.contains(cls)) >= 0;
     }
 
     /********************功能函数**********************/
