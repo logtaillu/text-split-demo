@@ -75,6 +75,11 @@ export default class TextSplit {
         return this.UNSPLIT_CLASSES.findIndex(cls => classList.contains(cls)) >= 0;
     }
 
+    /** 获取dom节点高度 */
+    private getNodeHeight(target: Element) {
+        return Math.max(this.getHeight(target), target.scrollHeight * this.getScale(target));
+    }
+
     /********************功能函数**********************/
     timer: number | null = null;
     /**
@@ -119,9 +124,9 @@ export default class TextSplit {
      */
     private waitForComplete(node: Element, interval: number = 50, gap = 0.1) {
         return new Promise<void>((resolve) => {
-            let height = node.scrollHeight;
+            let height = this.getNodeHeight(node);
             const timeFunc = () => {
-                let newHeight = node.scrollHeight;
+                let newHeight = this.getNodeHeight(node);
                 if (Math.abs(newHeight - height) < gap) {
                     this.timer && clearTimeout(this.timer);
                     resolve();
@@ -175,7 +180,7 @@ export default class TextSplit {
         // 计算底部位置
         const topOffset = this.getTopOffset(container, node);
         const scale = this.getScale(node);
-        const nodeHeight = node.scrollHeight * scale + topOffset;
+        const nodeHeight = this.getNodeHeight(node) + topOffset;
         if (nodeHeight <= height + this.HEIGHT_GAP) {
             // 2. 没有溢出
             return { left: node.cloneNode(true), move: null, top: null, bottom: null };
@@ -185,7 +190,7 @@ export default class TextSplit {
         if (topOffset > height + this.HEIGHT_GAP || children.length <= 0 || this.isUnsplitable(node)) {
             const noScaleTop = topOffset / scale;
             // 3. 整体都溢出、没有子元素或者不可分割，整个移动
-            return { left: null, move: node.cloneNode(true), top: noScaleTop, bottom: node.scrollHeight + noScaleTop };
+            return { left: null, move: node.cloneNode(true), top: noScaleTop, bottom: this.getNodeHeight(node) / scale + noScaleTop };
         }
         // 4. 遍历处理每个子节点，分离溢出的部分
         const result: ISplitResult = { left: null, move: null, top: null, bottom: null };
