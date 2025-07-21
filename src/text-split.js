@@ -98,28 +98,30 @@ export default class TextSplit {
   /**
    * 节点内容分割入口
    * 分割前一个dom内容后，为dom和下一个dom重新赋值html
-   * @param targets dom列表
    * @param html html文本
+   * @param divList div列表
    */
-  async splitText (source, target, html) {
+  async splitText (html, divList) {
     if (this.timer) {
       clearTimeout(this.timer)
     }
-    if (!source) {
+    if (divList.length <= 0) {
       return
     }
+    const source = divList[0];
     source.innerHTML = html
     // 通过高度监听等待dom渲染完成
     await this.waitForComplete(source)
-    // 如何判断完成
-    const {move, left, top, bottom} = this.splitContainer(source)
-    // 内容占高
-    const height = (bottom || 0) - (top || 0)
-    // 带上容器padding和border的高度，用于和真实撑开的高度对比
-    const totalHeight = this.getContainerTotalHeight(target, height)
-    source.innerHTML = left ? left.innerHTML : ''
-    target.innerHTML = move ? move.innerHTML : ''
-    /**
+    let container = source;
+    for (let i = 1; i < divList.length; i++) {
+      const {left, move, top, bottom} = this.splitContainer(container);
+      container.innerHTML = left ? left.innerHTML : "";
+      divList[i].innerHTML = move ? move.innerHTML : "";
+      container = divList[i];
+      // const height = (bottom || 0) - (top || 0);
+      // // 带上容器padding和border的高度，用于和真实撑开的高度对比
+      // const totalHeight = this.getContainerTotalHeight(container, height);
+      /**
      * 对比结果
      * 误差来源
      * 1. appendHeight(行高相比select range的溢出）按上下平分计算了，但是实际不是均分的
@@ -127,7 +129,9 @@ export default class TextSplit {
      * 容器内只有一段纯文本占满时，可以用容器和文本的top、bottom差值计算上下溢出
      * 2. scale上的计算误差：offsetHeight基本是整数，rect height会有小数
      */
-    console.log('result', Math.round(totalHeight), totalHeight, 'real', target.offsetHeight, target.getBoundingClientRect().height)
+      // console.log('result', Math.round(totalHeight), totalHeight, 'real', container.offsetHeight, container.getBoundingClientRect().height);
+
+    }
   }
 
   /**
