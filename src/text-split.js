@@ -188,6 +188,7 @@ export default class TextSplit {
   /**
    * 获取容器内容部分高度，包含顶部间距
    * @param node 当前节点
+   * @param {boolean} includeTop 是否包含顶部间距
    */
   getContainerHeight (node, includeTop) {
     // dom可用高度
@@ -197,7 +198,7 @@ export default class TextSplit {
     const gapHeight = this.getNum(paddingBottom) + this.getNum(borderBottomWidth)
     const heightWithBottom = height - gapHeight * this.getScale(node)
     if (!includeTop) {
-      return heightWithBottom - this.getNum(paddingTop) - this.getNodeHeight(borderTopWidth);
+      return heightWithBottom - this.getNum(paddingTop) - this.getNum(borderTopWidth);
     } else {
       return heightWithBottom;
     }
