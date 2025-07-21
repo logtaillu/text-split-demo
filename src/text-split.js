@@ -8,16 +8,24 @@
  * 2.tips
  *  1. getBoundingClientRect是受transform缩放影响的，offsetHeight不是
  *  2. selectRange只有getBoundingClientRect
+ *  3. follow previous和next的元素只做位置迁移，不计算高度，认为不占位
  */
 export default class TextSplit {
   // 常量
   // 允许误差
   HEIGHT_GAP = 0.001
-  // 不可分割标签
+  // 不可分割标签（大写）
   UNSPLIT_TAGS = []
   // 不可分割的类名
-  UNSPLIT_CLASSES = []
-
+  UNSPLIT_CLASSES = ['MathJax', 'MathJax_Display'];
+  // 跟随前一个元素的标签（大写）
+  FOLLOW_PREVIOUS_TAGS = ["SCRIPT"];
+  // 跟随前一个元素的类名
+  FOLLOW_PREVIOUS_CLASSES = [];
+  // 跟随后一个元素的标签（大写）
+  FOLLOW_NEXT_TAGS = [];
+  // 跟随后一个元素的类名
+  FOLLOW_NEXT_CLASSES = ["MathJax_Preview"];
   // region 辅助函数
   getScale (node) {
     // 假设 node 是一个 DOM 元素引用
@@ -54,14 +62,28 @@ export default class TextSplit {
   getHeight (target) {
     return target.getBoundingClientRect().height
   }
-
-  /** 判断是否可分割 */
-  isUnsplitable (target) {
-    if (this.UNSPLIT_TAGS.includes(target.tagName.toUpperCase())) {
+  isMatchTagOrClass (tags, classNames, target) {
+    if (this.isTextNode(target)) {
+      return false;
+    }
+    if (tags.includes(target.tagName.toUpperCase())) {
       return true
     }
     const classList = target.classList
-    return this.UNSPLIT_CLASSES.findIndex(cls => classList.contains(cls)) >= 0
+    return classNames.findIndex(cls => classList.contains(cls)) >= 0
+
+  }
+  /** 判断是否可分割 */
+  isUnsplitable (target) {
+    return this.isMatchTagOrClass(this.UNSPLIT_TAGS, this.UNSPLIT_CLASSES, target);
+  }
+
+  isFollowPrevious (target) {
+    return this.isMatchTagOrClass(this.FOLLOW_PREVIOUS_TAGS, this.FOLLOW_PREVIOUS_CLASSES, target);
+  }
+
+  isFollowNext (target) {
+    return this.isMatchTagOrClass(this.FOLLOW_NEXT_TAGS, this.FOLLOW_NEXT_CLASSES, target);
   }
 
   /** 获取dom节点高度 */
@@ -184,7 +206,7 @@ export default class TextSplit {
     if (topOffset > height + this.HEIGHT_GAP || children.length <= 0 || this.isUnsplitable(node)) {
       const noScaleTop = topOffset / scale
       // 3. 整体都溢出、没有子元素或者不可分割，整个移动
-      return { left: null, move: node.cloneNode(true), top: noScaleTop, bottom: this.getNodeHeight(node) / scale + noScaleTop }
+      return {left: null, move: node.cloneNode(true), top: noScaleTop, bottom: this.getNodeHeight(node) / scale + noScaleTop}
     }
     // 4. 遍历处理每个子节点，分离溢出的部分
     const result = {left: null, move: null, top: null, bottom: null}
@@ -198,11 +220,30 @@ export default class TextSplit {
         }
       }
     }
+    let preleft = true; // 前一个元素的结果
+    let followElement = null; // 需要跟随后一个的元素
     for (let idx = 0; idx < children.length; idx++) {
+      if (this.isFollowPrevious(children[idx])) {
+        // 跟随前一个元素
+        push(children[idx].cloneNode(true), preleft ? "left" : "move");
+        continue;
+      }
+      if (this.isFollowNext(children[idx])) {
+        // 跟随后一个元素
+        if (idx === children.length - 1) {
+          // 是最后一个元素
+          push(children[idx].cloneNode(true), result.move === null ? "left" : "move");
+        } else {
+          followElement = children[idx].cloneNode(true);
+        }
+        continue;
+      }
       const {move, left, top, bottom} = this.splitNode(children[idx], container, height)
+      push(followElement, move ? "move" : "left");
       push(left, 'left')
       push(move, 'move')
       if (move) {
+        preleft = false;
         if (top) {
           result.top = Math.min(top, result.top || top)
         }
@@ -210,6 +251,7 @@ export default class TextSplit {
           result.bottom = Math.max(bottom, result.bottom || bottom)
         }
       }
+      followElement = null;
     }
     return result
   }
