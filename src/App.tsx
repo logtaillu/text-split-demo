@@ -45,7 +45,7 @@ function App() {
       ></textarea>
       <div dangerouslySetInnerHTML={{ __html: html }} />
       <div ref={source} className='w-full border border-solid rounded h-50 overflow-hidden p-3 leading-6 box-border'></div>
-      <div ref={target} className='w-full border border-solid rounded min-h-50 p-3 leading-6 box-border h-80'></div>
+      <div ref={target} className='w-full border border-solid rounded min-h-50 p-3 leading-6 overflow-hidden box-border h-70'></div>
       <div ref={third} className='w-full border border-solid rounded min-h-50 p-3 leading-6 box-border'></div>
       <button onClick={onClick}>转换</button>
     </div>
