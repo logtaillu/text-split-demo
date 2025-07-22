@@ -222,12 +222,12 @@ export default class TextSplit {
     let isOver = false;
     for (let i = 0; i < heights.length; i++) {
       const total = heights[i].height + heights[i].top;
+      start = i;
       if (top > total + this.HEIGHT_GAP) {
         // 顶部超过当前容器的范围
         continue;
       }
       // 顶部没有超过，记录为起始容器，并判断底部是否溢出
-      start = i;
       isOver = i < heights.length-1 && bottom > total + this.HEIGHT_GAP;
       if (isOver && unsplitable) {
         // 不可分割容器，直接下移，假设它不会超过一个容器大小
