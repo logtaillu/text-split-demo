@@ -27,6 +27,11 @@ function App() {
   });
   const startSplit = (content: string) => {
     if (source.current && target.current && third.current) {
+      setTimeout(() => {
+        if (window.MathJax) {
+          MathJax.Hub.Queue(['Typeset', MathJax.Hub])
+        }
+      }, 20)
       splitHandler.splitText(content, [source.current, target.current, third.current])
     }
   }
