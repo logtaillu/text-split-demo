@@ -228,7 +228,7 @@ export default class TextSplit {
         continue;
       }
       // 顶部没有超过，记录为起始容器，并判断底部是否溢出
-      isOver = i < heights.length-1 && bottom > total + this.HEIGHT_GAP;
+      isOver = i < heights.length - 1 && bottom > total + this.HEIGHT_GAP;
       if (isOver && unsplitable) {
         // 不可分割容器，直接下移，假设它不会超过一个容器大小
         start = Math.min(i + 1, heights.length - 1);
@@ -379,6 +379,7 @@ export default class TextSplit {
     for (let start = totalRange.start; start < heights.length; start++) {
       // 二分查找临界位置
       const startChange = () => this.findStart(top, this.getHeight(range) + top + appendHeight, true, heights).start > start;
+      range.setStart(range.startContainer, posStart + 1);
       // 首尾都指向空位置，以处理整体下移或者不移动的情况,end为最后一个在当前容器的位置(1开始计数)
       const end = this.halfSplit(range, posStart, length + 1, startChange);
       // 分离文本
