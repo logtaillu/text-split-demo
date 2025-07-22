@@ -32,6 +32,8 @@ function App() {
           MathJax.Hub.Queue(['Typeset', MathJax.Hub])
         }
       }, 20)
+      target.current.innerHTML = ''
+      third.current.innerHTML = ''
       splitHandler.splitText(content, [source.current, target.current, third.current])
     }
   }
