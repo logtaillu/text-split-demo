@@ -1,17 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import './App.css'
-// @ts-ignore
-import TextSplit from './text-split.js';
-import { useResizeDetector } from 'react-resize-detector';
-import demoText from './text';
-const splitHandler = new TextSplit();
-
+// @ts-expect-error 忽略js文件
+import TextSplit from './text-split.js'
+import { useResizeDetector } from 'react-resize-detector'
+import demoText from './text'
+const splitHandler = new TextSplit()
+/**
+ *
+ *  if (window.MathJax) {
+        MathJax.Hub.Queue(['Typeset', MathJax.Hub])
+      }
+ */
 function App() {
-  const source = useRef<HTMLDivElement>(null);
-  const target = useRef<HTMLDivElement>(null);
-  const third = useRef<HTMLDivElement>(null);
-  const [text, setText] = useState(new Array(5).fill(demoText).join("\n"));
-  const [html, setHtml] = useState('');
+  const source = useRef<HTMLDivElement>(null)
+  const target = useRef<HTMLDivElement>(null)
+  const third = useRef<HTMLDivElement>(null)
+  const [text, setText] = useState(new Array(1).fill(demoText).join('\n'))
+  const [html, setHtml] = useState('')
 
   // // 高度变化监听
   const { width, ref } = useResizeDetector<HTMLDivElement>({
@@ -22,19 +27,19 @@ function App() {
   });
   const startSplit = (content: string) => {
     if (source.current && target.current && third.current) {
-      splitHandler.splitText(content, [source.current, target.current, third.current]);
+      splitHandler.splitText(content, [source.current, target.current, third.current])
     }
-  };
+  }
   // 监听外容器宽度变化，重新分割
-  useEffect(() => {
-    if (width) {
-      startSplit(html);
-    }
-  }, [width]);
+  // useEffect(() => {
+  //   if (width) {
+  //     startSplit(html);
+  //   }
+  // }, [width]);
   // 点击转换，初始分割
-  const onClick = () => {
-    setHtml(text);
-    startSplit(text);
+  const onClick = async () => {
+    setHtml(text)
+    startSplit(text)
   }
   return (
     <div className='flex flex-col items-center justify-center gap-4 max-w-200 w-full m-auto relative text-left' ref={ref}>
@@ -43,7 +48,6 @@ function App() {
         className='w-full h-30 border border-solid rounded' placeholder='请输入文本'
         value={text}
       ></textarea>
-      <div dangerouslySetInnerHTML={{ __html: html }} />
       <div ref={source} className='w-full border border-solid rounded h-50 overflow-hidden p-3 leading-6 box-border'></div>
       <div ref={target} className='w-full border border-solid rounded min-h-50 p-3 leading-6 overflow-hidden box-border h-70'></div>
       <div ref={third} className='w-full border border-solid rounded min-h-50 p-3 leading-6 box-border'></div>

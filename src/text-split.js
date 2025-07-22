@@ -18,15 +18,15 @@ export default class TextSplit {
   // 不可分割标签（大写）
   UNSPLIT_TAGS = []
   // 不可分割的类名
-  UNSPLIT_CLASSES = ['MathJax', 'MathJax_Display'];
+  UNSPLIT_CLASSES = ['MathJax', 'MathJax_Display']
   // 跟随前一个元素的标签（大写）
-  FOLLOW_PREVIOUS_TAGS = ["SCRIPT"];
+  FOLLOW_PREVIOUS_TAGS = ['SCRIPT']
   // 跟随前一个元素的类名
-  FOLLOW_PREVIOUS_CLASSES = [];
+  FOLLOW_PREVIOUS_CLASSES = []
   // 跟随后一个元素的标签（大写）
-  FOLLOW_NEXT_TAGS = [];
+  FOLLOW_NEXT_TAGS = []
   // 跟随后一个元素的类名
-  FOLLOW_NEXT_CLASSES = ["MathJax_Preview"];
+  FOLLOW_NEXT_CLASSES = ['MathJax_Preview']
   // region 辅助函数
   getScale (node) {
     // 假设 node 是一个 DOM 元素引用
@@ -65,26 +65,25 @@ export default class TextSplit {
   }
   isMatchTagOrClass (tags, classNames, target) {
     if (this.isTextNode(target)) {
-      return false;
+      return false
     }
     if (tags.includes(target.tagName.toUpperCase())) {
       return true
     }
     const classList = target.classList
     return classNames.findIndex(cls => classList.contains(cls)) >= 0
-
   }
   /** 判断是否可分割 */
   isUnsplitable (target) {
-    return this.isMatchTagOrClass(this.UNSPLIT_TAGS, this.UNSPLIT_CLASSES, target);
+    return this.isMatchTagOrClass(this.UNSPLIT_TAGS, this.UNSPLIT_CLASSES, target)
   }
 
   isFollowPrevious (target) {
-    return this.isMatchTagOrClass(this.FOLLOW_PREVIOUS_TAGS, this.FOLLOW_PREVIOUS_CLASSES, target);
+    return this.isMatchTagOrClass(this.FOLLOW_PREVIOUS_TAGS, this.FOLLOW_PREVIOUS_CLASSES, target)
   }
 
   isFollowNext (target) {
-    return this.isMatchTagOrClass(this.FOLLOW_NEXT_TAGS, this.FOLLOW_NEXT_CLASSES, target);
+    return this.isMatchTagOrClass(this.FOLLOW_NEXT_TAGS, this.FOLLOW_NEXT_CLASSES, target)
   }
 
   /** 获取dom节点高度 */
@@ -109,20 +108,20 @@ export default class TextSplit {
     if (divList.length <= 0) {
       return
     }
-    const source = divList[0];
+    const source = divList[0]
     source.innerHTML = html
     // 通过高度监听等待dom渲染完成
     await this.waitForComplete(source)
     // 开始切割，返回结构定义[{top, bottom, element}]
-    const results = this.splitContainer(divList);
-    console.log(results);
+    const results = this.splitContainer(divList)
+    console.log(results)
     divList.forEach((div, index) => {
-      const result = results[index] || {};
-      div.innerHTML = result.element ? result.element.innerHTML : '';
+      const result = results[index] || {}
+      div.innerHTML = result.element ? result.element.innerHTML : ''
       // 测试内容占高
-      const height = (result.bottom || 0) - (result.top || 0);
+      const height = (result.bottom || 0) - (result.top || 0)
       // 带上容器padding和border的高度，用于和真实撑开的高度对比
-      const totalHeight = this.getContainerTotalHeight(div, height);
+      const totalHeight = this.getContainerTotalHeight(div, height)
       /**
      * 对比结果
      * 误差来源
@@ -131,7 +130,7 @@ export default class TextSplit {
      * 容器内只有一段纯文本占满时，可以用容器和文本的top、bottom差值计算上下溢出
      * 2. scale上的计算误差：offsetHeight基本是整数，rect height会有小数
      */
-      console.log('result', Math.round(totalHeight), totalHeight, 'real', div.offsetHeight, div.getBoundingClientRect().height);
+      console.log('result', Math.round(totalHeight), totalHeight, 'real', div.offsetHeight, div.getBoundingClientRect().height)
     })
   }
 
@@ -143,18 +142,20 @@ export default class TextSplit {
    */
   waitForComplete (node, interval = 50, gap = 0.1) {
     return new Promise((resolve) => {
-        let height = this.getNodeHeight(node)
-        const timeFunc = () => {
-          let newHeight = this.getNodeHeight(node)
-          if (Math.abs(newHeight - height) < gap) {
-            this.timer && clearTimeout(this.timer)
-            resolve()
-          } else {
-            height = newHeight
-            this.timer = setTimeout(timeFunc, interval)
+      let height = this.getNodeHeight(node)
+      const timeFunc = () => {
+        const newHeight = this.getNodeHeight(node)
+        if (Math.abs(newHeight - height) < gap) {
+          if (this.timer) {
+            clearTimeout(this.timer)
           }
+          resolve()
+        } else {
+          height = newHeight
+          this.timer = setTimeout(timeFunc, interval)
         }
-        this.timer = setTimeout(timeFunc, interval)
+      }
+      this.timer = setTimeout(timeFunc, interval)
     })
   }
 
@@ -165,24 +166,24 @@ export default class TextSplit {
    */
   splitContainer (divList) {
     // 第一个元素是有dom在的
-    const container = divList[0];
-    let startTop = 0;
+    const container = divList[0]
+    let startTop = 0
     const heights = divList.map((div, index) => {
-      const height = this.getContainerHeight(div, index == 0);
-      const top = startTop;
-      startTop += height;
+      const height = this.getContainerHeight(div, index === 0)
+      const top = startTop
+      startTop += height
       return {
         height,
         top,
         bottom: null,
         element: null
       }
-    });
-    const nodeMap = this.splitNode(container, container, heights);
-    heights.forEach((current, idx) => {
-      current.element = nodeMap[idx] || null;
     })
-    return heights;
+    const nodeMap = this.splitNode(container, container, heights)
+    heights.forEach((current, idx) => {
+      current.element = nodeMap[idx] || null
+    })
+    return heights
   }
 
   /**
@@ -198,9 +199,9 @@ export default class TextSplit {
     const gapHeight = this.getNum(paddingBottom) + this.getNum(borderBottomWidth)
     const heightWithBottom = height - gapHeight * this.getScale(node)
     if (!includeTop) {
-      return heightWithBottom - this.getNum(paddingTop) - this.getNum(borderTopWidth);
+      return heightWithBottom - this.getNum(paddingTop) - this.getNum(borderTopWidth)
     } else {
-      return heightWithBottom;
+      return heightWithBottom
     }
   }
 
@@ -218,30 +219,31 @@ export default class TextSplit {
    * @param {Array} heights
    */
   findStart (top, bottom, unsplitable, heights) {
-    let start = 0;
-    let isOver = false;
+    let start = 0
+    let isOver = false
     for (let i = 0; i < heights.length; i++) {
-      const total = heights[i].height + heights[i].top;
-      start = i;
+      const total = heights[i].height + heights[i].top
+      start = i
       if (top > total + this.HEIGHT_GAP) {
         // 顶部超过当前容器的范围
-        continue;
+        continue
       }
       // 顶部没有超过，记录为起始容器，并判断底部是否溢出
-      isOver = i < heights.length - 1 && bottom > total + this.HEIGHT_GAP;
+      isOver = i < heights.length - 1 && bottom > total + this.HEIGHT_GAP
       if (isOver && unsplitable) {
         // 不可分割容器，直接下移，假设它不会超过一个容器大小
-        start = Math.min(i + 1, heights.length - 1);
-        isOver = false;
+        start = Math.min(i + 1, heights.length - 1)
+        isOver = false
       }
-      break;
+      break
     }
-    return {start, isOver};
+    return {start, isOver}
   }
   /** 查找数值最大的key */
   findMaxNumberKey (obj) {
-    const keys = Object.keys(obj).map(Number);  // 转换为数字数组
-    return Math.max(...keys);
+    // 转换为数字数组
+    const keys = Object.keys(obj).map(Number)
+    return Math.max(...keys)
   }
 
   /**
@@ -263,55 +265,57 @@ export default class TextSplit {
     // 子元素列表
     const children = Array.from(node.childNodes)
     // 是否可分割
-    const unsplitable = children.length <= 0 || this.isUnsplitable(node);
-    const {start, isOver} = this.findStart(topOffset, nodeHeight, unsplitable, heights);
+    const unsplitable = children.length <= 0 || this.isUnsplitable(node)
+    const {start, isOver} = this.findStart(topOffset, nodeHeight, unsplitable, heights)
     // 结果存储
-    const resultMap = {};
+    const resultMap = {}
     if (!isOver) {
       // 不需要分割
-      resultMap[start] = node.cloneNode(true);
-      const noScaleTop = topOffset / scale;
-      heights[start].top = Math.min(noScaleTop, heights[start].top);
-      heights[start].bottom = Math.max(this.getNodeHeight(node) / scale + noScaleTop, heights[start].bottom);
-      return resultMap;
+      resultMap[start] = node.cloneNode(true)
+      const noScaleTop = topOffset / scale
+      heights[start].top = Math.min(noScaleTop, heights[start].top)
+      heights[start].bottom = Math.max(this.getNodeHeight(node) / scale + noScaleTop, heights[start].bottom)
+      return resultMap
     }
     // 4. 遍历处理每个子节点，分离溢出的部分
     const push = (childs) => {
-      for (let start in childs) {
+      for (const start in childs) {
         if (childs[start]) {
           if (!resultMap[start]) {
-            resultMap[start] = node.cloneNode();
+            resultMap[start] = node.cloneNode()
           }
           if (resultMap[start]) {
-            resultMap[start].appendChild(childs[start]);
+            resultMap[start].appendChild(childs[start])
           }
         }
       }
     }
-    let preleft = 0; // 前一个元素的结果
-    let followElement = null; // 需要跟随后一个的元素
+    // 前一个元素的结果
+    let preleft = 0
+    // 需要跟随后一个的元素
+    let followElement = null
     for (let idx = 0; idx < children.length; idx++) {
       if (this.isFollowPrevious(children[idx])) {
         // 跟随前一个元素
-        push({[preleft]: children[idx].cloneNode(true)});
-        continue;
+        push({[preleft]: children[idx].cloneNode(true)})
+        continue
       }
       if (this.isFollowNext(children[idx])) {
         // 跟随后一个元素
         if (idx === children.length - 1) {
           // 是最后一个元素
-          push({[idx]: children[idx].cloneNode(true)});
+          push({[idx]: children[idx].cloneNode(true)})
         } else {
-          followElement = children[idx].cloneNode(true);
+          followElement = children[idx].cloneNode(true)
         }
-        continue;
+        continue
       }
-      const resultMap = this.splitNode(children[idx], container, heights);
-      preleft = this.findMaxNumberKey(resultMap);
+      const resultMap = this.splitNode(children[idx], container, heights)
+      preleft = this.findMaxNumberKey(resultMap)
       // 先推入followElement,再放结果
-      push({[preleft]: followElement});
-      push(resultMap);
-      followElement = null;
+      push({[preleft]: followElement})
+      push(resultMap)
+      followElement = null
     }
     return resultMap
   }
@@ -345,8 +349,8 @@ export default class TextSplit {
     const scale = this.getScale(node.parentNode)
     const top = (topOffset - appendHeight) / scale
     const bottom = (topOffset + this.getHeight(range) + appendHeight) / scale
-    target.top = Math.min(top, target.top);
-    target.bottom = Math.max(bottom, target.bottom);
+    target.top = Math.min(top, target.top)
+    target.bottom = Math.max(bottom, target.bottom)
   }
 
   /**
@@ -365,36 +369,36 @@ export default class TextSplit {
     // 获取附加高度
     const appendHeight = this.getAppendHeight(node, range)
     // 获取顶部偏移
-    const top = this.getTopOffset(container, range);
-    const resultMap = {};
+    const top = this.getTopOffset(container, range)
+    const resultMap = {}
     // 整体没有溢出
     range.setEnd(range.startContainer, length)
-    const totalRange = this.findStart(top, this.getHeight(range) + top + appendHeight, false, heights);
+    const totalRange = this.findStart(top, this.getHeight(range) + top + appendHeight, false, heights)
     if (!totalRange.isOver) {
-      resultMap[totalRange.start] = this.createTextNode(text);
-      this.getRangeRect(range, appendHeight, container, node, heights[totalRange.start]);
-      return resultMap;
+      resultMap[totalRange.start] = this.createTextNode(text)
+      this.getRangeRect(range, appendHeight, container, node, heights[totalRange.start])
+      return resultMap
     }
-    let posStart = 0;
+    let posStart = 0
     for (let start = totalRange.start; start < heights.length; start++) {
       // 二分查找临界位置
-      const startChange = () => this.findStart(top, this.getHeight(range) + top + appendHeight, true, heights).start > start;
-      range.setStart(range.startContainer, posStart);
+      const startChange = () => this.findStart(top, this.getHeight(range) + top + appendHeight, true, heights).start > start
+      range.setStart(range.startContainer, posStart)
       // 首尾都指向空位置，以处理整体下移或者不移动的情况,end为最后一个在当前容器的位置(1开始计数)
-      const end = this.halfSplit(range, posStart, length + 1, startChange);
+      const end = this.halfSplit(range, posStart, length + 1, startChange)
       // 分离文本
-      const newText = text.slice(posStart, end);
+      const newText = text.slice(posStart, end)
       if (newText.length) {
-        resultMap[start] = this.createTextNode(newText);
-        range.setEnd(range.startContainer, end);
-        this.getRangeRect(range, appendHeight, container, node, heights[start]);
+        resultMap[start] = this.createTextNode(newText)
+        range.setEnd(range.startContainer, end)
+        this.getRangeRect(range, appendHeight, container, node, heights[start])
       }
-      posStart = end;
+      posStart = end
       if (end >= length) {
-        break;
+        break
       }
     }
-    return resultMap;
+    return resultMap
   }
 
   /** 创建文本节点
