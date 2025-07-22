@@ -4,12 +4,13 @@
  * 递归遍历dom树
  *   - 若为纯文本节点，二分分割
  *   - 若为元素节点，递归处理子节点
- *   每个节点分割后，返回{left, move}结构的新节点，用于构建新节点，没有则为null
  * 2.tips
  *  1. getBoundingClientRect是受transform缩放影响的，offsetHeight不是
  *  2. selectRange只有getBoundingClientRect
  *  3. follow previous和next的元素只做位置迁移，不计算高度，认为不占位
- *  4. 返回结构以{top,bottom,element}[]形式返回
+ * 3. 高度计算误差说明
+ *  1. appendHeight(行高相比select range的溢出）按上下平分计算了，但是实际不是均分的
+ *  2. scale上的计算误差：offsetHeight基本是整数，rect height会有小数
  */
 export default class TextSplit {
   // 常量
@@ -90,6 +91,11 @@ export default class TextSplit {
   getNodeHeight (target) {
     return Math.max(this.getHeight(target), target.scrollHeight * this.getScale(target))
   }
+  /** 获取顶部距离 */
+  getTopDistance (target) {
+    const {paddingTop, borderTopWidth} = getComputedStyle(target)
+    return this.getNum(paddingTop) + this.getNum(borderTopWidth)
+  }
   // endregion
 
   // region 功能函数
@@ -100,8 +106,9 @@ export default class TextSplit {
    * 分割前一个dom内容后，为dom和下一个dom重新赋值html
    * @param targets dom列表
    * @param html html文本
+   * @param handler 设置html后，wait前的处理
    */
-  async splitText (html, divList) {
+  async splitText (html, divList, handler) {
     if (this.timer) {
       clearTimeout(this.timer)
     }
@@ -110,6 +117,9 @@ export default class TextSplit {
     }
     const source = divList[0]
     source.innerHTML = html
+    if (handler) {
+      await handler()
+    }
     // 通过高度监听等待dom渲染完成
     await this.waitForComplete(source)
     // 开始切割，返回结构定义[{top, bottom, element}]
@@ -121,17 +131,42 @@ export default class TextSplit {
       // 测试内容占高
       const height = (result.bottom || 0) - (result.top || 0)
       // 带上容器padding和border的高度，用于和真实撑开的高度对比
-      const totalHeight = this.getContainerTotalHeight(div, height)
-      /**
-     * 对比结果
-     * 误差来源
-     * 1. appendHeight(行高相比select range的溢出）按上下平分计算了，但是实际不是均分的
-     * 富文本内容没想到真实测量方式
-     * 容器内只有一段纯文本占满时，可以用容器和文本的top、bottom差值计算上下溢出
-     * 2. scale上的计算误差：offsetHeight基本是整数，rect height会有小数
-     */
-      console.log('result', Math.round(totalHeight), totalHeight, 'real', div.offsetHeight, div.getBoundingClientRect().height)
+      const totalHeight = this.getContainerTotalHeight(div, height, index === 0)
+      console.log('result', totalHeight, 'real', div.getBoundingClientRect().height, 'content', height - (index===0?this.getTopDistance(div):0))
     })
+  }
+
+  /**
+   * 获取在指定高度范围内，容器内容高度
+   * @param {Element} container 容器
+   * @param {number} height  容器内容高度
+   * @param {function} handler 前置处理
+   */
+  async getContentHeight (container, height, handler) {
+    if (handler) {
+      await handler()
+    }
+    // 通过高度监听等待dom渲染完成
+    await this.waitForComplete(container)
+    const gapHeight = this.getTopDistance(container)
+    // 模拟一个div list,第一个的高度为height+顶部距离
+    const heights = [
+      {
+        height: height + gapHeight,
+        top: 0,
+        bottom: null,
+        element: null
+      },
+      {
+        height,
+        top: height,
+        bottom: null,
+        element: null
+      }
+    ]
+    const results = this.splitNode(container, container, heights)
+    console.log('hhh', heights, results)
+    return heights[0].bottom - heights[0].top - gapHeight
   }
 
   /**
@@ -145,7 +180,7 @@ export default class TextSplit {
       let height = this.getNodeHeight(node)
       const timeFunc = () => {
         const newHeight = this.getNodeHeight(node)
-        if (Math.abs(newHeight - height) < gap) {
+        if (Math.abs(newHeight - height) < gap && !node.querySelector('.MathJax_Processing,.MathJax_Processed,.MathJax_Preview+script')) {
           if (this.timer) {
             clearTimeout(this.timer)
           }
@@ -204,11 +239,19 @@ export default class TextSplit {
       return heightWithBottom
     }
   }
-
-  // 获取容器完整高度
-  getContainerTotalHeight (node, height) {
+  /**
+   * 获取容器完整高度
+   * @param {*} node 节点
+   * @param {number} height 当前高度
+   * @param {boolean} includeTop height是否包含了顶部距离
+   * @returns {number}
+   */
+  getContainerTotalHeight (node, height, includeTop) {
     const {paddingBottom, borderBottomWidth, paddingTop, borderTopWidth} = getComputedStyle(node)
-    const gapHeight = this.getNum(paddingBottom) + this.getNum(borderBottomWidth) + this.getNum(paddingTop) + this.getNum(borderTopWidth)
+    let gapHeight = this.getNum(paddingBottom) + this.getNum(borderBottomWidth)
+    if (!includeTop) {
+      gapHeight=gapHeight+ this.getNum(paddingTop) + this.getNum(borderTopWidth)
+    }
     return gapHeight + height
   }
   /**

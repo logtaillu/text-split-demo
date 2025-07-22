@@ -31,7 +31,14 @@ export default tseslint.config([
         applyDefaultPatterns: true
       }],
       // 禁止代码块内的空行填充
-      'padded-blocks': ['error', 'never']
+      'padded-blocks': ['error', 'never'],
+      'prefer-const': ['error', {
+        // 对解构赋值也应用规则
+        destructuring: 'any',
+        // 不忽略赋值前被读取的变量
+        ignoreReadBeforeAssign: false
+      }],
+      'indent': ['error', 2]
     }
   },
 ])
