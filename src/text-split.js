@@ -143,18 +143,18 @@ export default class TextSplit {
    */
   waitForComplete (node, interval = 50, gap = 0.1) {
     return new Promise((resolve) => {
-      let height = this.getNodeHeight(node)
-      const timeFunc = () => {
-        let newHeight = this.getNodeHeight(node)
-        if (Math.abs(newHeight - height) < gap) {
-          this.timer && clearTimeout(this.timer)
-          resolve()
-        } else {
-          height = newHeight
-          this.timer = setTimeout(timeFunc, interval)
+        let height = this.getNodeHeight(node)
+        const timeFunc = () => {
+          let newHeight = this.getNodeHeight(node)
+          if (Math.abs(newHeight - height) < gap) {
+            this.timer && clearTimeout(this.timer)
+            resolve()
+          } else {
+            height = newHeight
+            this.timer = setTimeout(timeFunc, interval)
+          }
         }
-      }
-      this.timer = setTimeout(timeFunc, interval)
+        this.timer = setTimeout(timeFunc, interval)
     })
   }
 
@@ -379,7 +379,7 @@ export default class TextSplit {
     for (let start = totalRange.start; start < heights.length; start++) {
       // 二分查找临界位置
       const startChange = () => this.findStart(top, this.getHeight(range) + top + appendHeight, true, heights).start > start;
-      range.setStart(range.startContainer, posStart + 1);
+      range.setStart(range.startContainer, posStart);
       // 首尾都指向空位置，以处理整体下移或者不移动的情况,end为最后一个在当前容器的位置(1开始计数)
       const end = this.halfSplit(range, posStart, length + 1, startChange);
       // 分离文本
