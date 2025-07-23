@@ -77,7 +77,8 @@ function App() {
     htmlRef.current!.innerHTML = text
     // 容器内部高度：不含边框和padding
     const containerHeight = splitHandler.getContainerHeight(source.current, false)
-    const usedHeight = await splitHandler.getContentHeight(htmlRef.current, containerHeight, renderMathJax)
+    await splitHandler.waitRender(htmlRef.current, renderMathJax)
+    const usedHeight = await splitHandler.getContentHeight(htmlRef.current, containerHeight)
     console.log('usedHeight', usedHeight, 'containerHeight', containerHeight)
   }
   const cls = 'w-full border border-solid rounded overflow-hidden p-3 leading-6 box-border'

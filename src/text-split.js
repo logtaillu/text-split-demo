@@ -157,11 +157,8 @@ export default class TextSplit {
    * 获取容器内容高度：不含padding、border，带小数
    * @param {Element} container 容器
    * @param {number} height  容器内容高度
-   * @param {function} handler 前置处理，可不传
    */
-  async getContentHeight (container, height, handler) {
-    // 等待完成
-    await this.waitRender(container, handler)
+  getContentHeight (container, height) {
     // 获取顶部额外距离
     const gapHeight = this.getTopDistance(container)
     // 模拟一个div list,第一个的高度为height+顶部距离
