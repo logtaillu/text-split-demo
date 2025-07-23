@@ -136,7 +136,7 @@ export default class TextSplit {
   }
 
   /**
-   * 获取在指定高度范围内，容器内容高度(不含padding、border)
+   * 获取容器内容高度：不含padding、border，带小数
    * @param {Element} container 容器
    * @param {number} height  容器内容高度
    * @param {function} handler 前置处理，可不传
