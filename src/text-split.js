@@ -16,6 +16,8 @@ export default class TextSplit {
   // 常量
   // 允许误差
   HEIGHT_GAP = 0.001
+  // 垂直重合判断允许误差范围
+  LINE_OFFSET = 0.1
   // 不可分割标签（大写）
   UNSPLIT_TAGS = []
   // 不可分割的类名
@@ -36,7 +38,7 @@ export default class TextSplit {
   getCalcValue (target, getValue, compare) {
     const targetValue = getValue(target)
     if (this.isUnsplitable(target)) {
-      const heightEle = target? target.querySelector(this.HEIGHT_CLASSES.map(cls => `.${cls}`).join(',')):null
+      const heightEle = target && target.querySelector? target.querySelector(this.HEIGHT_CLASSES.map(cls => `.${cls}`).join(',')):null
       if (heightEle) {
         return Math[compare](getValue(heightEle), targetValue)
       }
@@ -241,7 +243,7 @@ export default class TextSplit {
     })
     const nodeMap = this.splitNode(container, container, heights, 0)
     heights.forEach((current, idx) => {
-      current.element = nodeMap[idx] || null
+      current.element = nodeMap[idx].node || null
       // 对于第一个元素，去除额外的顶部间距，和其他div保持结果中高度逻辑上的统一
       if (idx === 0) {
         const topDistance = this.getTopDistance(divList[idx])
@@ -311,10 +313,13 @@ export default class TextSplit {
     return {start, isOver}
   }
   /** 查找数值最大的key */
-  findMaxNumberKey (obj) {
+  findNumberKey (obj) {
     // 转换为数字数组
     const keys = Object.keys(obj).map(Number)
-    return Math.max(...keys)
+    return {
+      max: Math.max(...keys),
+      min: Math.min(...keys)
+    }
   }
 
   /**
@@ -339,60 +344,105 @@ export default class TextSplit {
     // 是否可分割
     const unsplitable = children.length <= 0 || this.isUnsplitable(node)
     const {start, isOver} = this.findStart(topOffset, nodeHeight, unsplitable, heights, startIdx)
+    const block = getComputedStyle(node).display !== 'inline'
     // 结果存储
     const resultMap = {}
     if (!isOver) {
-      // 不需要分割
-      resultMap[start] = node.cloneNode(true)
+      // 不需要分割，返回top和bottom,判断仍有欠缺再考虑left和right
       const noScaleTop = topOffset / scale
+      const noScaleBottom = this.getNodeHeight(node) / scale + noScaleTop
+      resultMap[start] = {
+        node: node.cloneNode(true),
+        top: noScaleTop,
+        bottom: noScaleBottom,
+        block
+      }
       heights[start].top = Math.min(noScaleTop, heights[start].top)
-      heights[start].bottom = Math.max(this.getNodeHeight(node) / scale + noScaleTop, heights[start].bottom)
+      heights[start].bottom = Math.max(noScaleBottom, heights[start].bottom)
       return resultMap
     }
     // 4. 遍历处理每个子节点，分离溢出的部分
-    const push = (childs) => {
-      for (const start in childs) {
-        if (childs[start]) {
-          if (!resultMap[start]) {
-            resultMap[start] = node.cloneNode()
-          }
-          if (resultMap[start]) {
-            resultMap[start].appendChild(childs[start])
-          }
-        }
+    const tempResult = {}
+    const push = (currentIndex, currentChild) => {
+      if (currentChild.node) {
+        tempResult[currentIndex]=tempResult[currentIndex]||[]
+        tempResult[currentIndex].push(currentChild)
       }
     }
     // 前一个元素的结果
     let preleft = 0
+    let prepos ={top:0,bottom: 0}
     // 需要跟随后一个的元素
     let followElement = null
     for (let idx = 0; idx < children.length; idx++) {
       if (this.isFollowPrevious(children[idx])) {
-        push({[preleft]: followElement})
+        push(preleft, {node: followElement, ...prepos})
         followElement = null
         // 跟随前一个元素
-        push({[preleft]: children[idx].cloneNode(true)})
+        push(preleft, {node: children[idx].cloneNode(true),...prepos})
         continue
       }
       if (this.isFollowNext(children[idx])) {
         // 跟随后一个元素
         if (idx === children.length - 1) {
           // 是最后一个元素
-          push({[idx]: children[idx].cloneNode(true)})
+          push(idx, {node: children[idx].cloneNode(true),...prepos})
         } else {
           followElement = children[idx].cloneNode(true)
         }
         continue
       }
-      const resultMap = this.splitNode(children[idx], container, heights, preleft)
-      preleft = this.findMaxNumberKey(resultMap)
+      const currentResult = this.splitNode(children[idx], container, heights, preleft)
+      const keys = this.findNumberKey(currentResult)
+      preleft = keys.max
+      prepos = {top: currentResult[preleft].top,bottom: currentResult[preleft].bottom}
+      // 同行处理
+      this.moveNodes(keys.min, currentResult[keys.min], tempResult)
       // 先推入followElement,再放结果
-      push({[preleft]: followElement})
-      push(resultMap)
+      push(preleft,{node: followElement,...prepos})
+      for (const startIndex in currentResult) {
+        push(startIndex, currentResult[startIndex])
+      }
       followElement = null
+    }
+    // 创建返回节点
+    for (const index in tempResult) {
+      const current = tempResult[index]
+      if (!current.length) {
+        continue
+      }
+      resultMap[index] = {node: node.cloneNode(), top:current[0].top, bottom: current[0].bottom,block}
+      current.forEach(child => {
+        const savePos = resultMap[index]
+        savePos.node.appendChild(child.node)
+        savePos.top = Math.min(savePos.top, child.top)
+        savePos.bottom = Math.max(savePos.bottom, child.bottom)
+      })
     }
     return resultMap
   }
+  /** 基于top、bottom的是否同行判断 */
+  moveNodes (index, result, tempResult) {
+    const lastArray = tempResult[index - 1]
+    const {top,bottom}=result
+    if (lastArray && lastArray.length) {
+      const moved = []
+      const lefted = []
+      lastArray.forEach(current => {
+        const sameLine = !current.block && current.bottom - top > this.LINE_OFFSET && current.top - bottom < this.LINE_OFFSET
+        if (sameLine) {
+          moved.push(current)
+        } else {
+          lefted.push(current)
+        }
+      })
+      if (moved.length) {
+        tempResult[index - 1] = lefted
+        tempResult[index] = (tempResult[index] || []).concat(moved)
+      }
+    }
+  }
+
   // endregion
   // region 文本节点分割
   /**
@@ -425,6 +475,7 @@ export default class TextSplit {
     const bottom = (topOffset + this.getHeight(range) + appendHeight) / scale
     target.top = Math.min(top, target.top)
     target.bottom = Math.max(bottom, target.bottom)
+    return {top,bottom, block: false}
   }
 
   /**
@@ -450,8 +501,11 @@ export default class TextSplit {
     range.setEnd(range.startContainer, length)
     const totalRange = this.findStart(top, this.getHeight(range) + top + appendHeight, false, heights, startIdx)
     if (!totalRange.isOver) {
-      resultMap[totalRange.start] = this.createTextNode(text)
-      this.getRangeRect(range, appendHeight, container, node, heights[totalRange.start])
+      const pos = this.getRangeRect(range, appendHeight, container, node, heights[totalRange.start])
+      resultMap[totalRange.start] = {
+        node: this.createTextNode(text),
+        ...pos
+      }
       return resultMap
     }
     let posStart = 0
@@ -464,9 +518,12 @@ export default class TextSplit {
       // 分离文本
       const newText = text.slice(posStart, end)
       if (newText.length) {
-        resultMap[start] = this.createTextNode(newText)
         range.setEnd(range.startContainer, end)
-        this.getRangeRect(range, appendHeight, container, node, heights[start])
+        const pos = this.getRangeRect(range, appendHeight, container, node, heights[start])
+        resultMap[start] = {
+          node: this.createTextNode(newText),
+          ...pos
+        }
       }
       posStart = end
       if (end >= length) {
