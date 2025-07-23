@@ -243,7 +243,9 @@ export default class TextSplit {
     })
     const nodeMap = this.splitNode(container, container, heights, 0)
     heights.forEach((current, idx) => {
-      current.element = nodeMap[idx].node || null
+      if (nodeMap[idx]) {
+        current.element = nodeMap[idx].node || null
+      }
       // 对于第一个元素，去除额外的顶部间距，和其他div保持结果中高度逻辑上的统一
       if (idx === 0) {
         const topDistance = this.getTopDistance(divList[idx])
