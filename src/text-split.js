@@ -20,6 +20,9 @@ export default class TextSplit {
   UNSPLIT_TAGS = []
   // 不可分割的类名
   UNSPLIT_CLASSES = ['MathJax', 'MathJax_Display']
+  // 不可切割元素，实际的高度测量元素
+  // 是对公式的特殊处理，行内外层span小于实际高度
+  HEIGHT_CLASSES = ['math']
   // 跟随前一个元素的标签（大写）
   FOLLOW_PREVIOUS_TAGS = ['SCRIPT']
   // 跟随前一个元素的类名
@@ -29,10 +32,20 @@ export default class TextSplit {
   // 跟随后一个元素的类名
   FOLLOW_NEXT_CLASSES = ['MathJax_Preview']
   // region 辅助函数
+  /** 获取定位高度计算的元素 */
+  getCalcValue (target, getValue, compare) {
+    const targetValue = getValue(target)
+    if (this.isUnsplitable(target)) {
+      const heightEle = target? target.querySelector(this.HEIGHT_CLASSES.map(cls => `.${cls}`).join(',')):null
+      if (heightEle) {
+        return Math[compare](getValue(heightEle), targetValue)
+      }
+    }
+    return targetValue
+  }
   /** 获取缩放比 */
   getScale (node) {
-    // 假设 node 是一个 DOM 元素引用
-    const offsetHeight = node ? node.offsetHeight : 0
+    const offsetHeight = this.getCalcValue(node, target => target?target.offsetHeight: 0, 'max')
     return offsetHeight ? this.getHeight(node) / offsetHeight : 0
   }
 
@@ -58,16 +71,19 @@ export default class TextSplit {
   }
 
   /** 计算到容器顶部的距离 */
-  getTopOffset (container, node) {
-    return node.getBoundingClientRect().top - container.getBoundingClientRect().top
+  getTopOffset (container, target) {
+    const containerTop = container.getBoundingClientRect().top
+    const nodeTop = this.getCalcValue(target, t => t.getBoundingClientRect().top, 'min')
+    return nodeTop - containerTop
   }
 
-  /** 获取bound高度 */
+  /** 获取bound高度， */
   getHeight (target) {
-    return target.getBoundingClientRect().height
+    const rectHeight = this.getCalcValue(target, t=>t.getBoundingClientRect().height,'max')
+    return rectHeight
   }
   isMatchTagOrClass (tags, classNames, target) {
-    if (this.isTextNode(target)) {
+    if (this.isTextNode(target) || target instanceof Range) {
       return false
     }
     if (tags.includes(target.tagName.toUpperCase())) {
@@ -127,11 +143,11 @@ export default class TextSplit {
     divList.forEach((div, index) => {
       const result = results[index] || {}
       div.innerHTML = result.element ? result.element.innerHTML : ''
-      // 测试内容占高
-      const height = (result.bottom || 0) - (result.top || 0)
-      // 带上容器padding和border的高度，用于和真实撑开的高度对比
-      const totalHeight = this.getContainerTotalHeight(div, height)
-      console.log('result', totalHeight, 'real', div.getBoundingClientRect().height, 'content', height)
+      // // 测试内容占高
+      // const height = (result.bottom || 0) - (result.top || 0)
+      // // 带上容器padding和border的高度，用于和真实撑开的高度对比
+      // const totalHeight = this.getContainerTotalHeight(div, height)
+      // console.log('result', totalHeight, 'real', div.getBoundingClientRect().height, 'content', height)
     })
   }
 
@@ -161,7 +177,7 @@ export default class TextSplit {
         element: null
       }
     ]
-    this.splitNode(container, container, heights)
+    this.splitNode(container, container, heights, 0)
     return heights[0].bottom - heights[0].top - gapHeight
   }
   /** 等待渲染完成 */
@@ -223,7 +239,7 @@ export default class TextSplit {
         element: null
       }
     })
-    const nodeMap = this.splitNode(container, container, heights)
+    const nodeMap = this.splitNode(container, container, heights, 0)
     heights.forEach((current, idx) => {
       current.element = nodeMap[idx] || null
       // 对于第一个元素，去除额外的顶部间距，和其他div保持结果中高度逻辑上的统一
@@ -271,11 +287,12 @@ export default class TextSplit {
    * @param {number} bottom
    * @param {boolean} unsplitable 是否可分割
    * @param {Array} heights
+   * @param {number} startIdx 起始索引
    */
-  findStart (top, bottom, unsplitable, heights) {
-    let start = 0
+  findStart (top, bottom, unsplitable, heights, startIdx) {
+    let start = startIdx
     let isOver = false
-    for (let i = 0; i < heights.length; i++) {
+    for (let i = startIdx; i < heights.length; i++) {
       const total = heights[i].height + heights[i].top
       start = i
       if (top > total + this.HEIGHT_GAP) {
@@ -305,11 +322,12 @@ export default class TextSplit {
    * @param node 当前节点
    * @param container 容器
    * @param heights 结果列表
+   * @param startIdx 起始容器索引
    */
-  splitNode (node, container, heights) {
+  splitNode (node, container, heights, startIdx = 0) {
     if (this.isTextNode(node)) {
       // 1. 纯文本节点，走文本分割逻辑
-      return this.splitTextNode(node, container, heights)
+      return this.splitTextNode(node, container, heights, startIdx)
     }
     // 顶部位置
     const topOffset = this.getTopOffset(container, node)
@@ -320,7 +338,7 @@ export default class TextSplit {
     const children = Array.from(node.childNodes)
     // 是否可分割
     const unsplitable = children.length <= 0 || this.isUnsplitable(node)
-    const {start, isOver} = this.findStart(topOffset, nodeHeight, unsplitable, heights)
+    const {start, isOver} = this.findStart(topOffset, nodeHeight, unsplitable, heights, startIdx)
     // 结果存储
     const resultMap = {}
     if (!isOver) {
@@ -350,6 +368,8 @@ export default class TextSplit {
     let followElement = null
     for (let idx = 0; idx < children.length; idx++) {
       if (this.isFollowPrevious(children[idx])) {
+        push({[preleft]: followElement})
+        followElement = null
         // 跟随前一个元素
         push({[preleft]: children[idx].cloneNode(true)})
         continue
@@ -364,7 +384,7 @@ export default class TextSplit {
         }
         continue
       }
-      const resultMap = this.splitNode(children[idx], container, heights)
+      const resultMap = this.splitNode(children[idx], container, heights, preleft)
       preleft = this.findMaxNumberKey(resultMap)
       // 先推入followElement,再放结果
       push({[preleft]: followElement})
@@ -412,8 +432,9 @@ export default class TextSplit {
    * @param node 当前节点
    * @param container 容器
    * @param heights 距离集合
+   * @param startIdx 起始容器索引
    */
-  splitTextNode (node, container, heights) {
+  splitTextNode (node, container, heights, startIdx = 0) {
     // 文本内容
     const text = node.textContent || ''
     // 创建range
@@ -427,7 +448,7 @@ export default class TextSplit {
     const resultMap = {}
     // 整体没有溢出
     range.setEnd(range.startContainer, length)
-    const totalRange = this.findStart(top, this.getHeight(range) + top + appendHeight, false, heights)
+    const totalRange = this.findStart(top, this.getHeight(range) + top + appendHeight, false, heights, startIdx)
     if (!totalRange.isOver) {
       resultMap[totalRange.start] = this.createTextNode(text)
       this.getRangeRect(range, appendHeight, container, node, heights[totalRange.start])
@@ -436,7 +457,7 @@ export default class TextSplit {
     let posStart = 0
     for (let start = totalRange.start; start < heights.length; start++) {
       // 二分查找临界位置
-      const startChange = () => this.findStart(top, this.getHeight(range) + top + appendHeight, true, heights).start > start
+      const startChange = () => this.findStart(top, this.getHeight(range) + top + appendHeight, true, heights, startIdx).start > start
       range.setStart(range.startContainer, posStart)
       // 首尾都指向空位置，以处理整体下移或者不移动的情况,end为最后一个在当前容器的位置(1开始计数)
       const end = this.halfSplit(range, posStart, length + 1, startChange)

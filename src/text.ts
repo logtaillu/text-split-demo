@@ -85,4 +85,4 @@ const demoText = `<div>
         <script type="math/tex" id="MathJax-Element-90">\\triangle {AOB}</script>的面积的最大值为（&nbsp;&nbsp; ）
     </p>
 </div>`
-export default demoText
+export default demoText.replace(/>(\s+)</g, '><')

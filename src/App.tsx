@@ -46,11 +46,12 @@ function App() {
       if (window.MathJax) {
         // 调用 MathJax 进行公式排版
         window.MathJax.Hub.Queue(['Typeset', window.MathJax.Hub],
-          function () {
-            resolve(true)
-          }
+          // function () {
+          //   resolve(true)
+          // }
         )
       }
+      resolve(true)
     })
   }
   const clearContent = () => {
@@ -88,7 +89,7 @@ function App() {
         value={text}
       ></textarea>
       <div className={cls} ref={htmlRef} />
-      <div ref={source} className={`${cls} h-75`}></div>
+      <div ref={source} className={`${cls} h-120`}></div>
       <div ref={target} className={`${cls} h-70`}></div>
       <div ref={third}  className={`${cls} min-h-50`}></div>
       <div>
