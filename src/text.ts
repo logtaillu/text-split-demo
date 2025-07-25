@@ -84,5 +84,106 @@ const demoText = `<div>
             style="color: inherit;"></span>
         <script type="math/tex" id="MathJax-Element-90">\\triangle {AOB}</script>的面积的最大值为（&nbsp;&nbsp; ）
     </p>
+    <p>
+        <table>
+        <tr>
+            <th>学号</th>
+            <th>姓名</th>
+            <th>语文</th>
+            <th>数学</th>
+            <th>英语</th>
+            <th>总分</th>
+        </tr>
+        <tr>
+            <td>2023001</td>
+            <td>张三</td>
+            <td>88</td>
+            <td>95</td>
+            <td>90</td>
+            <td>273</td>
+        </tr>
+        <tr>
+            <td>2023002</td>
+            <td>李四</td>
+            <td>92</td>
+            <td>87</td>
+            <td>94</td>
+            <td>273</td>
+        </tr>
+        <tr>
+            <td>2023003</td>
+            <td>王五</td>
+            <td>79</td>
+            <td>91</td>
+            <td>85</td>
+            <td>255</td>
+        </tr>
+        <tr>
+            <td>2023004</td>
+            <td>赵六</td>
+            <td>94</td>
+            <td>82</td>
+            <td>88</td>
+            <td>264</td>
+        </tr>
+    </table>
+        <table>
+        <tr>
+            <th rowspan="2">产品类别</th>
+            <th rowspan="2">产品名称</th>
+            <th colspan="4">销售额(万元)</th>
+        </tr>
+        <tr>
+            <th>一季度</th>
+            <th>二季度</th>
+            <th>三季度</th>
+            <th>四季度</th>
+        </tr>
+        <tr>
+            <td rowspan="3" class="category">电子产品</td>
+            <td>智能手机</td>
+            <td>120</td>
+            <td>150</td>
+            <td>130</td>
+            <td>180</td>
+        </tr>
+        <tr>
+            <td>笔记本电脑</td>
+            <td>90</td>
+            <td>110</td>
+            <td>100</td>
+            <td>130</td>
+        </tr>
+        <tr>
+            <td>平板电脑</td>
+            <td>60</td>
+            <td>75</td>
+            <td>70</td>
+            <td>90</td>
+        </tr>
+        <tr>
+            <td rowspan="2" class="category">家居用品</td>
+            <td>家具</td>
+            <td>80</td>
+            <td>95</td>
+            <td>90</td>
+            <td>110</td>
+        </tr>
+        <tr>
+            <td>家用电器</td>
+            <td>110</td>
+            <td>130</td>
+            <td>120</td>
+            <td>150</td>
+        </tr>
+        <tr>
+            <td colspan="2"><strong>全年总计</strong></td>
+            <td><strong>460</strong></td>
+            <td><strong>560</strong></td>
+            <td><strong>510</strong></td>
+            <td><strong>660</strong></td>
+        </tr>
+    </table>
+    </p>
 </div>`
 export default demoText.replace(/>(\s+)</g, '><')

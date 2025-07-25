@@ -90,8 +90,8 @@ function App() {
         value={text}
       ></textarea>
       <div className={cls} ref={htmlRef} />
-      <div ref={source} className={`${cls} h-107`}></div>
-      <div ref={target} className={`${cls} h-70`}></div>
+      <div ref={source} className={`${cls} h-130`}></div>
+      <div ref={target} className={`${cls} h-130`}></div>
       <div ref={third}  className={`${cls} min-h-50`}></div>
       <div>
         <button onClick={startSplit}>转换</button>

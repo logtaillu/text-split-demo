@@ -19,7 +19,7 @@ export default class TextSplit {
   // 垂直重合判断允许误差范围
   LINE_OFFSET = 1
   // 不可分割标签（大写）
-  UNSPLIT_TAGS = []
+  UNSPLIT_TAGS = ['TR','TH', 'SVG']
   // 不可分割的类名
   UNSPLIT_CLASSES = ['MathJax', 'MathJax_Display']
   // 不可切割元素，实际的高度测量元素
@@ -114,6 +114,10 @@ export default class TextSplit {
 
   /** 获取dom节点高度 */
   getNodeHeight (target) {
+    // 表格的特殊处理，不计算到内部的行分割
+    if (['TR', 'TH'].includes(target.tagName.toUpperCase())) {
+      return this.getHeight(target)
+    }
     return Math.max(this.getHeight(target), target.scrollHeight * this.getScale(target))
   }
 
@@ -418,6 +422,11 @@ export default class TextSplit {
       }
       followElement = null
     }
+    // table处理
+    const splitedNum = Object.keys(tempResult).filter(key => tempResult[key].length).length
+    if(splitedNum>1 && node.tagName.toLocaleLowerCase()==='tbody') {
+      this.splitTable(tempResult)
+    }
     // 创建返回节点
     for (const index in tempResult) {
       const current = tempResult[index]
@@ -590,4 +599,71 @@ export default class TextSplit {
   }
 
   // endregion
+  // region 表格切分
+  splitTable (tempResult) {
+    const keys = Object.keys(tempResult).sort((a, b) => a - b).map(Number)
+    let startRow = 0
+    const fillTds = []
+    for (let i = 0; i < keys.length - 1; i++) {
+      // 得到当前切分信息
+      this.splitMerged(fillTds,tempResult[keys[i]], startRow, tempResult[keys[i] + 1])
+      startRow += tempResult[keys[i]].length
+    }
+  }
+  /** 获取合并切分信息 */
+  splitMerged (fillTds, trs, startRow, nexts) {
+    // 找到第一个还没有到当前行的列，行列合并下每行td会有不同
+    const getCol = row => {
+      const col = fillTds.findIndex(s => s.row <= row)
+      return col >= 0 ? col : fillTds.length
+    }
+    trs.forEach((tr, rownum) => {
+      tr.node.childNodes.forEach((td, i) => {
+        const col = getCol(rownum + startRow)
+        if (i === col) {
+          this.fillTd(fillTds, col, td)
+        }
+      })
+    })
+    if (!nexts.length) {
+      return
+    }
+    const len = trs.length + startRow
+    let cur = 0
+    fillTds.forEach((tdInfo, col) => {
+      const {row, td} = tdInfo
+      if (row <= len) {
+        cur++
+        // 没有跨容器
+        return
+      }
+      if (col > 0 && td === rows[col - 1].td) {
+        // 排除列合并
+        return
+      }
+      const gap = row - len
+      td.rowSpan -= gap
+      // 为下一容器生成复制格
+      const cloneTd = td.cloneNode(true)
+      cloneTd.rowSpan = gap
+      const insertedRow = nexts[0].node
+      if (cur < insertedRow.children.length) {
+        insertedRow.insertBefore(cloneTd, insertedRow.children[cur])
+      } else {
+        insertedRow.appendChild(cloneTd)
+      }
+      cur++
+    })
+  }
+  /** 填充合并信息 */
+  fillTd (ary, col, td) {
+    for (let i = 0; i < td.colSpan; i++){
+      const currentIdx = i + col
+      const target = ary[currentIdx] || {}
+      ary[currentIdx] = {
+        row: (target.row || 0) + td.rowSpan,
+        td
+      }
+    }
+  }
 }
