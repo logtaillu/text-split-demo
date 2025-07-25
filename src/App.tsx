@@ -78,7 +78,7 @@ function App() {
     // 容器内部高度：不含边框和padding
     const containerHeight = splitHandler.getContainerHeight(source.current, false)
     await splitHandler.waitRender(htmlRef.current, renderMathJax)
-    const usedHeight = await splitHandler.getContentHeight(htmlRef.current, containerHeight)
+    const usedHeight = splitHandler.getContentHeight(htmlRef.current, containerHeight)
     console.log('usedHeight', usedHeight, 'containerHeight', containerHeight)
   }
   const cls = 'w-full border border-solid rounded overflow-hidden p-3 leading-6 box-border'
@@ -90,7 +90,7 @@ function App() {
         value={text}
       ></textarea>
       <div className={cls} ref={htmlRef} />
-      <div ref={source} className={`${cls} h-120`}></div>
+      <div ref={source} className={`${cls} h-107`}></div>
       <div ref={target} className={`${cls} h-70`}></div>
       <div ref={third}  className={`${cls} min-h-50`}></div>
       <div>

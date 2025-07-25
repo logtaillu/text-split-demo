@@ -17,7 +17,7 @@ export default class TextSplit {
   // 允许误差
   HEIGHT_GAP = 0.001
   // 垂直重合判断允许误差范围
-  LINE_OFFSET = 0.1
+  LINE_OFFSET = 1
   // 不可分割标签（大写）
   UNSPLIT_TAGS = []
   // 不可分割的类名
@@ -360,10 +360,10 @@ export default class TextSplit {
     const block = getComputedStyle(node).display !== 'inline'
     // 结果存储
     const resultMap = {}
-    if (!isOver) {
+    if (!isOver && (scale || unsplitable)) {
       // 不需要分割，返回top和bottom,判断仍有欠缺再考虑left和right
-      const noScaleTop = topOffset / scale
-      const noScaleBottom = this.getNodeHeight(node) / scale + noScaleTop
+      const noScaleTop = scale ? topOffset / scale : heights[start].top
+      const noScaleBottom = scale ? this.getNodeHeight(node) / scale + noScaleTop : heights[start].bottom
       resultMap[start] = {
         node: node.cloneNode(true),
         top: noScaleTop,

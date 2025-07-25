@@ -32,7 +32,7 @@ const demoText = `<div>
             style="color: inherit;"></span>
         <script type="math/tex" id="MathJax-Element-71">{ABC}</script>所成的角的正切值为（&nbsp; &nbsp;）
     </p>
-    <p><img src="//cdn.dongni100.com/upload/entrust/431046/1729340787580_016.png"></p>
+    <p><img style="float:right;" src="//cdn.dongni100.com/upload/entrust/431046/1729340787580_016.png"></p>
     <p>&nbsp;</p>
     <p>若锐角<span class="MathJax_Preview" style="color: inherit;"></span>
         <script type="math/tex" id="MathJax-Element-72">\\alpha</script>满足<span class="MathJax_Preview"
