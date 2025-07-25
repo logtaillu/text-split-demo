@@ -19,7 +19,7 @@ export default class TextSplit {
   // 垂直重合判断允许误差范围
   LINE_OFFSET = 1
   // 不可分割标签（大写）
-  UNSPLIT_TAGS = ['TR','TH', 'SVG']
+  UNSPLIT_TAGS = ['TR', 'TH', 'SVG']
   // 不可分割的类名
   UNSPLIT_CLASSES = ['MathJax', 'MathJax_Display']
   // 不可切割元素，实际的高度测量元素
@@ -424,7 +424,7 @@ export default class TextSplit {
     }
     // table处理
     const splitedNum = Object.keys(tempResult).filter(key => tempResult[key].length).length
-    if(splitedNum>1 && node.tagName.toLocaleLowerCase()==='tbody') {
+    if (splitedNum > 1 && node.tagName.toLocaleLowerCase() === 'tbody') {
       this.splitTable(tempResult)
     }
     // 创建返回节点
@@ -606,7 +606,7 @@ export default class TextSplit {
     const fillTds = []
     for (let i = 0; i < keys.length - 1; i++) {
       // 得到当前切分信息
-      this.splitMerged(fillTds,tempResult[keys[i]], startRow, tempResult[keys[i] + 1])
+      this.splitMerged(fillTds, tempResult[keys[i]], startRow, tempResult[keys[i] + 1])
       startRow += tempResult[keys[i]].length
     }
   }
@@ -637,7 +637,7 @@ export default class TextSplit {
         // 没有跨容器
         return
       }
-      if (col > 0 && td === rows[col - 1].td) {
+      if (col > 0 && td === fillTds[col - 1].td) {
         // 排除列合并
         return
       }
@@ -657,7 +657,7 @@ export default class TextSplit {
   }
   /** 填充合并信息 */
   fillTd (ary, col, td) {
-    for (let i = 0; i < td.colSpan; i++){
+    for (let i = 0; i < td.colSpan; i++) {
       const currentIdx = i + col
       const target = ary[currentIdx] || {}
       ary[currentIdx] = {
