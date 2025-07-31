@@ -245,12 +245,14 @@ export default class TextSplit {
     const heights = divList.map((div, index) => {
       const height = this.getContainerHeight(div, index === 0)
       const top = startTop
-      startTop += height
+      
+      startTop += this.getContainerHeight(div, index === 0, true) 
       return {
         height,
         top,
         bottom: null,
-        element: null
+        element: null,
+        scale: this.getScale(div)
       }
     })
     const nodeMap = this.splitNode(container, container, heights, 0)
@@ -273,13 +275,14 @@ export default class TextSplit {
    * @param node 当前节点
    * @param {boolean} includeTop 是否包含顶部间距
    */
-  getContainerHeight (node, includeTop) {
+  getContainerHeight (node, includeTop, needScale) {
     // dom可用高度
     const height = this.getHeight(node)
+    const scale = needScale ? this.getScale(node) : 1
     // 去除padding和border的高度
     const {paddingBottom, borderBottomWidth, paddingTop, borderTopWidth} = getComputedStyle(node)
     const gapHeight = this.getNum(paddingBottom) + this.getNum(borderBottomWidth)
-    const heightWithBottom = height - gapHeight * this.getScale(node)
+    const heightWithBottom = (scale ? height / scale : 0) - gapHeight * this.getScale(node)
     if (!includeTop) {
       return heightWithBottom - this.getNum(paddingTop) - this.getNum(borderTopWidth)
     } else {
