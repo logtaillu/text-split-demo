@@ -43,14 +43,14 @@ function App() {
   // 触发公式渲染
   const renderMathJax = async () => {
     return new Promise((resolve) => {
-      if (window.MathJax) {
-        // 调用 MathJax 进行公式排版
-        window.MathJax.Hub.Queue(['Typeset', window.MathJax.Hub],
-          // function () {
-          //   resolve(true)
-          // }
-        )
-      }
+    //   if (window.MathJax) {
+    //     // 调用 MathJax 进行公式排版
+    //     window.MathJax.Hub.Queue(['Typeset', window.MathJax.Hub],
+    //       // function () {
+    //       //   resolve(true)
+    //       // }
+    //     )
+    //   }
       resolve(true)
     })
   }
@@ -81,16 +81,16 @@ function App() {
     const usedHeight = splitHandler.getContentHeight(htmlRef.current, containerHeight)
     console.log('usedHeight', usedHeight, 'containerHeight', containerHeight)
   }
-  const cls = 'w-full border border-solid rounded overflow-hidden p-3 leading-6 box-border'
+  const cls = 'w-full border border-none rounded overflow-hidden p-0 leading-[1.5] box-border text-12px'
   return (
-    <div className='flex flex-col items-center justify-center gap-4 max-w-200 w-full m-auto relative text-left' ref={ref}>
+    <div className='flex flex-col items-center justify-center gap-4 max-w-200 w-462px m-auto relative text-left' ref={ref}>
       <textarea
         onChange={(e) => { setText(e.target.value) }}
         className='w-full h-30 border border-solid rounded' placeholder='请输入文本'
         value={text}
       ></textarea>
       <div className={cls} ref={htmlRef} />
-      <div ref={source} className={`${cls} h-130`}></div>
+      <div ref={source} className={`${cls} h-72px`}></div>
       <div ref={target} className={`${cls} h-130`}></div>
       <div ref={third}  className={`${cls} min-h-50`}></div>
       <div>
