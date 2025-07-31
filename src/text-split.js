@@ -360,8 +360,9 @@ export default class TextSplit {
     const children = Array.from(node.childNodes)
     // 是否可分割
     const unsplitable = children.length <= 0 || this.isUnsplitable(node)
-    const {start, isOver} = this.findStart(topOffset, nodeHeight, unsplitable, heights, startIdx)
-    const block = getComputedStyle(node).display !== 'inline'
+    const { start, isOver } = this.findStart(topOffset, nodeHeight, unsplitable, heights, startIdx)
+    const display = getComputedStyle(node).display
+    const block = display !== 'inline' && display !== 'inline-block'
     // 结果存储
     const resultMap = {}
     if (!isOver && (scale || unsplitable)) {
@@ -380,6 +381,8 @@ export default class TextSplit {
     }
     // 4. 遍历处理每个子节点，分离溢出的部分
     const tempResult = {}
+    // 5. 缓存进入当前层级时的top/bottom信息，用于重置
+    const tempHeights = heights.map(item => ({ ...item }))
     const push = (currentIndex, currentChild) => {
       if (currentChild.node) {
         tempResult[currentIndex] = tempResult[currentIndex] || []
@@ -439,6 +442,9 @@ export default class TextSplit {
         savePos.node.appendChild(child.node)
         savePos.top = Math.min(savePos.top, child.top)
         savePos.bottom = Math.max(savePos.bottom, child.bottom)
+        // 修正heights，去除moveNodes的影响
+        heights[index].bottom = Math.max(savePos.bottom, tempHeights[index].bottom)
+        heights[index].top = Math.min(savePos.top, tempHeights[index].top)
       })
     }
     return resultMap
